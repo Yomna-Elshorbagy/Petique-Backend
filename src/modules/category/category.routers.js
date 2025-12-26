@@ -31,6 +31,16 @@ categoryRouter.get(
   isAuthenticated,
   categoryControllers.getRevenueDistribution
 );
+categoryRouter.get(
+  "/getDeleted",
+  isAuthenticated,
+  categoryControllers.getSoftDeletedCategories
+);
+categoryRouter.put(
+  "/restore/:id",
+  isAuthenticated,
+  categoryControllers.restoreCategory
+);
 
 categoryRouter.put(
   "/soft/:id",

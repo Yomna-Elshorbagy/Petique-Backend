@@ -203,3 +203,54 @@ export const updateContact = catchAsyncError(async (req, res, next) => {
     data: contact,
   });
 });
+
+
+export const getSoftDeletedContacts = catchAsyncError(
+  async (req, res, next) => {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 100;
+    const skip = (page - 1) * limit;
+
+    const filter = { isDeleted: true };
+
+    const totalContacts = await Contact.countDocuments(filter);
+    const totalPages = Math.ceil(totalContacts / limit);
+
+    const contacts = await Contact.find(filter)
+      .sort({ deletedAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    res.status(200).json({
+      success: true,
+      message: "Soft deleted contacts fetched successfully",
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalContacts,
+      },
+      data: contacts,
+    });
+  }
+);
+
+export const restoreContact = catchAsyncError(async (req, res, next) => {
+  const { id } = req.params;
+
+  const contact = await Contact.findById(id);
+  if (!contact) return next(new AppError("Contact not found", 404));
+
+  if (!contact.isDeleted)
+    return next(new AppError("Contact is not deleted", 400));
+
+  contact.isDeleted = false;
+  contact.deletedAt = undefined;
+
+  await contact.save();
+
+  res.status(200).json({
+    success: true,
+    message: "Contact restored successfully",
+    data: contact,
+  });
+});

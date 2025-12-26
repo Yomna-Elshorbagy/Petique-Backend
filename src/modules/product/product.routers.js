@@ -45,6 +45,19 @@ productRouter.post(
   isAuthenticated,
   productControllers.importProducts
 );
+// ===== Soft Deleted Products =====
+productRouter.get(
+  "/getDeleted",
+  isAuthenticated,
+  productControllers.getSoftDeletedProducts
+);
+
+productRouter.put(
+  "/restore/:id",
+  isAuthenticated,
+  productControllers.restoreProduct
+);
+
 productRouter.post(
   "/notify-price-drop/:productId",
   isAuthenticated,

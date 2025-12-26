@@ -387,3 +387,82 @@ export const getRevenueDistribution = catchAsyncError(
     return res.status(200).json({ success: true, data });
   }
 );
+
+//===> return soft deleted data 
+export const getSoftDeletedCategories = catchAsyncError(
+  async (req, res, next) => {
+    const categories = await Category.find({ isDeleted: true }).populate({
+      path: "deletedBy",
+      select: ["userName", "email"],
+    });
+
+    const productCounts = await Product.aggregate([
+      {
+        $match: { isDeleted: true },
+      },
+      {
+        $group: {
+          _id: "$category",
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          _id: { $toString: "$_id" },
+          count: 1,
+        },
+      },
+    ]);
+
+    const merged = categories.map((cat) => {
+      const found = productCounts.find(
+        (pc) => pc._id === cat._id.toString()
+      );
+      return {
+        ...cat.toObject(),
+        productCount: found ? found.count : 0,
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      results: merged.length,
+      data: merged,
+    });
+  }
+);
+
+//===> restore categories soft deleted with its products 
+export const restoreCategory = catchAsyncError(async (req, res, next) => {
+  const { id } = req.params;
+
+  const category = await Category.findById(id);
+  if (!category)
+    return next(new AppError(messages.category.notFound, 404));
+
+  if (!category.isDeleted)
+    return next(new AppError("Category is not deleted", 400));
+
+  // restore category
+  category.isDeleted = false;
+  category.deletedBy = undefined;
+  category.deletedAt = undefined;
+
+  await category.save();
+
+  // restore products under this category
+  await Product.updateMany(
+    { category: id },
+    {
+      isDeleted: false,
+      deletedBy: undefined,
+      deletedAt: undefined,
+    }
+  );
+
+  res.status(200).json({
+    success: true,
+    message: "Category restored successfully",
+    data: category,
+  });
+});

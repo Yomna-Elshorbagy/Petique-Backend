@@ -3,6 +3,7 @@ import { AppError } from "../utils/catch-error.js";
 import { globalError } from "../utils/global-error.js";
 import * as allRouters from "./index.js";
 import "../schedulers/reminder.scheduler.js";
+import "../schedulers/cleanupDeletedData_scheduler.js";
 
 export const bootstrap = (app) => {
   process.on("uncaughtException", (err) => {

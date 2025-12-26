@@ -1,6 +1,6 @@
 import { Router } from "express";
 import * as analytics from "./analytics.controllers.js";
-import { isAuthenticated } from "../../../middelwares/auth.js";
+import { isAuthenticated } from "../../middelwares/auth.js";
 
 const analyticsRouter = Router();
 

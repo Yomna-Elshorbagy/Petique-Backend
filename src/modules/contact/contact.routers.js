@@ -7,6 +7,18 @@ const contactRouter = Router();
 
 contactRouter.post("/", contactControllers.contactUs);
 contactRouter.get("/", isAuthenticated, contactControllers.getAllContacts);
+contactRouter.get(
+  "/getDeleted",
+  isAuthenticated,
+  contactControllers.getSoftDeletedContacts
+);
+
+contactRouter.put(
+  "/restore/:id",
+  isAuthenticated,
+  contactControllers.restoreContact
+);
+
 contactRouter.delete("/:id", isAuthenticated, contactControllers.deleteContact);
 contactRouter.put(
   "/softdelete/:id",

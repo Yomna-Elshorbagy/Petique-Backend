@@ -1,7 +1,7 @@
-import petModel from "../../../../database/models/pet.model.js";
-import Reservation from "../../../../database/models/reservation.model.js";
-import vaccinationModel from "../../../../database/models/vaccination.model.js";
-import { catchAsyncError } from "../../../utils/catch-error.js";
+import petModel from "../../../database/models/pet.model.js";
+import Reservation from "../../../database/models/reservation.model.js";
+import vaccinationModel from "../../../database/models/vaccination.model.js";
+import { catchAsyncError } from "../../utils/catch-error.js";
 
 // =====> pet analysis
 

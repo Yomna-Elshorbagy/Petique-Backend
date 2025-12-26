@@ -950,3 +950,65 @@ export const createCheckoutSession = catchAsyncError(async (req, res, next) => {
 
   res.status(200).json({ message: "success", data: session });
 });
+
+export const getSoftDeletedOrders = catchAsyncError(async (req, res, next) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 100;
+  const skip = (page - 1) * limit;
+
+  const filter = { isDeleted: true };
+
+  const ordersQuery = Order.find(filter)
+    .populate("user", "firstName lastName email")
+    .populate("products.productId", "title price finalPrice")
+    .sort({ deletedAt: -1 })
+    .skip(skip)
+    .limit(limit);
+
+  const [orders, totalOrders] = await Promise.all([
+    ordersQuery,
+    Order.countDocuments(filter),
+  ]);
+
+  const totalPages = Math.ceil(totalOrders / limit);
+
+  res.status(200).json({
+    success: true,
+    message: "Soft deleted orders fetched successfully",
+    pagination: {
+      currentPage: page,
+      totalPages,
+      totalOrders,
+    },
+    data: orders,
+  });
+});
+
+export const restoreOrder = catchAsyncError(async (req, res, next) => {
+  const { id } = req.params;
+
+  const order = await Order.findById(id);
+  if (!order) return next(new AppError(messages.order.notFound, 404));
+
+  if (!order.isDeleted)
+    return next(new AppError("Order is not deleted", 400));
+
+  order.isDeleted = false;
+  order.deletedAt = undefined;
+
+  await order.save();
+
+  await notificationModel.create({
+    user: order.user,
+    type: "ORDER",
+    title: "Order Restored",
+    message: "Your order has been restored successfully.",
+    data: { orderId: order._id },
+  });
+
+  res.status(200).json({
+    success: true,
+    message: "Order restored successfully",
+    data: order,
+  });
+});

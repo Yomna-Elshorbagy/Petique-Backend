@@ -568,3 +568,56 @@ export const getUserPriceSubscriptions = catchAsyncError(
     });
   }
 );
+
+// ===> get Soft Deleted Products
+export const getSoftDeletedProducts = catchAsyncError(async (req, res, next) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 100;
+  const skip = (page - 1) * limit;
+
+  const filter = { isDeleted: true };
+
+  const totalProducts = await Product.countDocuments(filter);
+
+  const products = await Product.find(filter)
+    .populate("category", "name image")
+    .populate("createdBy", "userName email")
+    .sort({ deletedAt: -1 })
+    .skip(skip)
+    .limit(limit);
+
+  res.status(200).json({
+    success: true,
+    results: products.length,
+    pagination: {
+      currentPage: page,
+      totalPages: Math.ceil(totalProducts / limit),
+      totalProducts,
+    },
+    data: products,
+  });
+});
+
+// ===> restore Soft Deleted Product
+export const restoreProduct = catchAsyncError(async (req, res, next) => {
+  const { id } = req.params;
+
+  const product = await Product.findById(id);
+  if (!product) return next(new AppError(messages.product.notFound, 404));
+
+  if (!product.isDeleted)
+    return next(new AppError("Product is not deleted", 400));
+
+  product.isDeleted = false;
+  product.deletedAt = null;
+  product.deletedBy = null;
+  product.updatedBy = req.authUser._id;
+
+  await product.save();
+
+  res.status(200).json({
+    success: true,
+    message: "Product restored successfully",
+    data: product,
+  });
+});

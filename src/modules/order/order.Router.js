@@ -39,6 +39,20 @@ orderRouter.post(
 );
 orderRouter.post("/", isAuthenticated, orderControllers.createOrder);
 orderRouter.post("/withoutStripe", isAuthenticated, orderControllers.createOrderWithoutstripe);
+// ==> soft deleted orders (admin)
+orderRouter.get(
+  "/getDeleted",
+  isAuthenticated,
+  orderControllers.getSoftDeletedOrders
+);
+
+// ==> restore order
+orderRouter.put(
+  "/restore/:id",
+  isAuthenticated,
+  orderControllers.restoreOrder
+);
+
 orderRouter.post(
   "/checkSession/:id",
   isAuthenticated,

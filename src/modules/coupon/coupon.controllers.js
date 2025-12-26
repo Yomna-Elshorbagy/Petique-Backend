@@ -189,3 +189,57 @@ export const softDeleteCoupon = catchAsyncError(async (req, res, next) => {
     data: couponExist,
   });
 });
+
+export const getSoftDeletedCoupons = catchAsyncError(
+  async (req, res, next) => {
+    const page = parseInt(req.query.page) || 1;
+    const size = parseInt(req.query.size) || 10;
+    const skip = (page - 1) * size;
+
+    const filter = { isDeleted: true };
+
+    const totalDocuments = await Coupon.countDocuments(filter);
+    const numberOfPages = Math.ceil(totalDocuments / size);
+
+    const coupons = await Coupon.find(filter)
+      .sort({ deletedAt: -1 })
+      .skip(skip)
+      .limit(size);
+
+    res.status(200).json({
+      success: true,
+      message: "Soft deleted coupons fetched successfully",
+      results: coupons.length,
+      metadata: {
+        currentPage: page,
+        numberOfPages,
+        limit: size,
+        totalDocuments,
+        prevPage: page > 1 ? page - 1 : null,
+        nextPage: page < numberOfPages ? page + 1 : null,
+      },
+      data: coupons,
+    });
+  }
+);
+
+export const restoreCoupon = catchAsyncError(async (req, res, next) => {
+  const { id } = req.params;
+
+  const coupon = await Coupon.findById(id);
+  if (!coupon) return next(new AppError(messages.coupon.notFound, 404));
+
+  if (!coupon.isDeleted)
+    return next(new AppError("Coupon is not deleted", 400));
+
+  coupon.isDeleted = false;
+  coupon.deletedAt = undefined;
+
+  await coupon.save();
+
+  res.status(200).json({
+    success: true,
+    message: "Coupon restored successfully",
+    data: coupon,
+  });
+});
