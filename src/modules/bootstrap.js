@@ -34,6 +34,7 @@ export const bootstrap = (app) => {
   app.use("/chat", allRouters.chatRouter);
   app.use("/disc", allRouters.discountRouter);
   app.use("/analytics", allRouters.analyticsRouter);
+  app.use("/staff", allRouters.staffRouter);
 
   app.use((req, res, next) => {
     next(new AppError(`Route Not Found ${req.originalUrl}`, 404));

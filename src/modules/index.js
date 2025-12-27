@@ -19,6 +19,7 @@ import couponRouter from "./coupon/coupon.routers.js";
 import discountRouter from './discount/discount.routers.js';
 import chatRouter from './Chat/chatRouter.js';
 import analyticsRouter from './analysis/analysis.routers.js';
+import staffRouter from './staff/staff.routers.js';
 
 export {
   authRouter,
@@ -41,5 +42,6 @@ export {
   couponRouter,
   discountRouter,
   chatRouter,
-  analyticsRouter
+  analyticsRouter,
+  staffRouter
 };
