@@ -5,6 +5,7 @@ import Category from "../../database/models/category.model.js";
 import Product from "../../database/models/product.model.js";
 import Coupon from "../../database/models/coupon.model.js";
 import Contact from "../../database/models/contact.model.js";
+import petModel from "../../database/models/pet.model.js";
 
 /* ===================== CONFIG ===================== */
 const DAYS = {
@@ -110,4 +111,30 @@ schedule.scheduleJob("40 3 * * *", async () => {
   } catch (err) {
     console.error("❌ Contacts Cleanup Failed:", err);
   }
+});
+
+// ===> for update vaccination status
+schedule.scheduleJob("0 0 * * *", async () => {
+  const now = new Date();
+  await petModel.updateMany(
+    {
+      "vaccinationHistory.status": "scheduled",
+      "vaccinationHistory.nextDose": { $lt: now },
+    },
+    {
+      $set: {
+        "vaccinationHistory.$[v].status": "overdue",
+      },
+    },
+    {
+      arrayFilters: [
+        {
+          "v.status": "scheduled",
+          "v.nextDose": { $lt: now },
+        },
+      ],
+    }
+  );
+
+  console.log("✔ Vaccinations overdue updated");
 });

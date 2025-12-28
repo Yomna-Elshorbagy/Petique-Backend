@@ -2,13 +2,17 @@ import { Router } from "express";
 import * as staffControllers from "./staff.controllers.js";
 import { isAuthenticated, isAuthorized } from "../../middelwares/auth.js";
 import { roles } from "../../utils/constant/enums.js";
+import { uploadSingleFile } from "../../utils/fileUpload/multer-cloud.js";
 
 const staffRouter = Router();
 
 staffRouter.use(
   isAuthenticated,
-  isAuthorized(roles.STAFF, roles.OWNER)
+  isAuthorized([roles.OWNER, roles.STAFF])
 );
+
+staffRouter.get("/", staffControllers.getAllEmployee);
+staffRouter.post("/", uploadSingleFile("image"), staffControllers.addNewEmployee);
 
 // get all reservations
 staffRouter.get(
@@ -16,7 +20,7 @@ staffRouter.get(
   staffControllers.getAllReservationsForStaff
 );
 
-// update reservation status
+// update reservation status & schedule
 staffRouter.patch(
   "/reservations/:id/status",
   staffControllers.updateReservationStatusByStaff
@@ -58,11 +62,26 @@ staffRouter.get(
   staffControllers.getVaccinationOverviewForStaff
 );
 
+staffRouter.get(
+  "/pet-owners/:userId",
+  staffControllers.getPetOwnerDetailsForStaff
+);
+
 
 // assign / change doctor
-staffRouter.patch(
+staffRouter.put(
   "/reservations/:id/assign-doctor",
   staffControllers.assignDoctorToReservation
 );
+
+staffRouter.patch(
+  "/pets/:petId/vaccinations/:vaccinationHistoryId",
+  staffControllers.updatePetVaccinationByStaff
+);
+
+// update / delete / soft delete employee
+staffRouter.put("/soft/:id", staffControllers.softDeletedEmployee);
+staffRouter.delete("/deleteDoc/:id", staffControllers.deleteEmployee);
+staffRouter.put("/updateDoc/:id", uploadSingleFile("image"),staffControllers.updateEmployee);
 
 export default staffRouter;
