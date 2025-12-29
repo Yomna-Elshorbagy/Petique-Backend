@@ -13,6 +13,7 @@ staffRouter.use(
 
 staffRouter.get("/", staffControllers.getAllEmployee);
 staffRouter.post("/", uploadSingleFile("image"), staffControllers.addNewEmployee);
+staffRouter.post("/full-reservation", staffControllers.createFullReservationByStaff);
 
 // get all reservations
 staffRouter.get(

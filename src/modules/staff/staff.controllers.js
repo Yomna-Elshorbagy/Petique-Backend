@@ -5,9 +5,13 @@ import { roles } from "../../utils/constant/enums.js";
 import { ApiFeature } from "../../utils/file-feature.js";
 import User from "./../../../database/models/user.model.js";
 import cloudinary from "../../utils/fileUpload/cloudinary.js";
+import mongoose from "mongoose";
+import notificationModel from "../../../database/models/notification.model.js";
+import animalCategoryModel from "../../../database/models/animalCategory.model.js";
+import Service from "../../../database/models/service.model.js";
+import { TIME_SLOTS } from "../../utils/constant/timeSlots.js";
 
-
-//======> Staff 
+//======> Staff
 // ==> get all Employee
 export const getAllEmployee = catchAsyncError(async (req, res, next) => {
   const Employee = await User.find({
@@ -23,7 +27,7 @@ export const getAllEmployee = catchAsyncError(async (req, res, next) => {
 
 // ==> add new Employee
 export const addNewEmployee = catchAsyncError(async (req, res, next) => {
-  const { userName, email, password, mobileNumber, gender  } = req.body;
+  const { userName, email, password, mobileNumber, gender } = req.body;
 
   // ===> 1- Check existing doctor by email or phone
   const existing = await User.findOne({
@@ -172,7 +176,8 @@ export const updateEmployee = catchAsyncError(async (req, res, next) => {
   if (gender !== undefined) employee.gender = gender;
 
   const updatedEmployee = await employee.save();
-  if (!updatedEmployee) return next(new AppError("Failed to update employee", 500));
+  if (!updatedEmployee)
+    return next(new AppError("Failed to update employee", 500));
 
   updatedEmployee.password = undefined;
 
@@ -212,23 +217,201 @@ export const getAllReservationsForStaff = catchAsyncError(async (req, res) => {
 export const updateReservationStatusByStaff = catchAsyncError(
   async (req, res, next) => {
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, date, timeSlot } = req.body;
 
+    // ===== Validate status =====
     const allowedStatus = ["pending", "confirmed", "cancelled", "completed"];
-    if (!allowedStatus.includes(status))
+    if (status && !allowedStatus.includes(status)) {
       return next(new AppError("Invalid status", 400));
+    }
 
     const reservation = await Reservation.findById(id);
     if (!reservation) return next(new AppError("Reservation not found", 404));
 
-    reservation.status = status;
+    // ===== If updating date or timeSlot → check conflicts =====
+    if (date || timeSlot) {
+      const newDate = date ? new Date(date) : reservation.date;
+      const newTimeSlot = timeSlot || reservation.timeSlot;
+
+      const conflict = await Reservation.findOne({
+        _id: { $ne: reservation._id },
+        doctor: reservation.doctor,
+        date: newDate,
+        timeSlot: newTimeSlot,
+        isDeleted: false,
+      });
+
+      if (conflict) {
+        return next(
+          new AppError("Doctor already has a reservation at this time", 409)
+        );
+      }
+
+      reservation.date = newDate;
+      reservation.timeSlot = newTimeSlot;
+
+      // Optional: reset status if date changed
+      if (status !== "cancelled") {
+        reservation.status = "pending";
+      }
+    }
+
+    // ===== Update status =====
+    if (status) {
+      reservation.status = status;
+    }
+
     await reservation.save();
 
     res.status(200).json({
       success: true,
-      message: "Reservation status updated",
+      message: "Reservation updated successfully",
       data: reservation,
     });
+  }
+);
+
+//===> add reservation by staff
+export const createFullReservationByStaff = catchAsyncError(
+  async (req, res, next) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      const { user, pet, reservation } = req.body;
+
+      // ===================== 1) CREATE OR GET USER =====================
+      let petOwner = await User.findOne({
+        $or: [{ email: user.email }, { mobileNumber: user.mobileNumber }],
+      }).session(session);
+
+      if (!petOwner) {
+        petOwner = await User.create(
+          [
+            {
+              userName: user.userName,
+              email: user.email,
+              mobileNumber: user.mobileNumber,
+              gender: user.gender,
+              role: roles.PETOWNER,
+              status: status.VERIFIED,
+              isVerified: true,
+            },
+          ],
+          { session }
+        );
+        petOwner = petOwner[0];
+      }
+
+      // ===================== 2) CREATE PET =====================
+      const categoryExist = await animalCategoryModel
+        .findOne({
+          name: pet.category, 
+          isDeleted: false,
+        })
+        .session(session);
+
+      if (!categoryExist) {
+        throw new AppError("Pet category not found", 404);
+      }
+
+      const createdPet = await petModel.create(
+        [
+          {
+            petOwner: petOwner._id,
+            name: pet.name,
+            age: pet.age,
+            weight: pet.weight,
+            category: categoryExist._id,
+            allergies: pet.allergies || [],
+          },
+        ],
+        { session }
+      );
+
+      // ===================== 3) VALIDATE SERVICE =====================
+      const serviceExist = await Service.findOne({
+        _id: reservation.service,
+        isDeleted: false,
+      }).session(session);
+
+      if (!serviceExist) throw new AppError("Service not found", 404);
+
+      // ===================== 4) VALIDATE DOCTOR =====================
+      if (reservation.doctor) {
+        const doctorExist = await User.findOne({
+          _id: reservation.doctor,
+          role: roles.DOCTORS,
+          isActive: true,
+        }).session(session);
+
+        if (!doctorExist) throw new AppError("Doctor not found", 404);
+      }
+
+      // ===================== 5) CHECK TIME SLOT =====================
+      if (!TIME_SLOTS.includes(reservation.timeSlot)) {
+        throw new AppError("Invalid time slot", 400);
+      }
+
+      const conflict = await Reservation.findOne({
+        doctor: reservation.doctor,
+        date: reservation.date,
+        timeSlot: reservation.timeSlot,
+        isDeleted: false,
+      }).session(session);
+
+      if (conflict) throw new AppError("Time slot already booked", 409);
+
+      // ===================== 6) CREATE RESERVATION =====================
+      const createdReservation = await Reservation.create(
+        [
+          {
+            petOwner: petOwner._id,
+            pet: createdPet[0]._id,
+            service: reservation.service,
+            serviceName: serviceExist.title,
+            doctor: reservation.doctor || null,
+            date: reservation.date,
+            timeSlot: reservation.timeSlot,
+            notes: reservation.notes,
+          },
+        ],
+        { session }
+      );
+
+      // ===================== 7) NOTIFICATION =====================
+      await notificationModel.create(
+        [
+          {
+            user: petOwner._id,
+            type: "RESERVATION",
+            title: "Reservation Created",
+            message: `Your reservation for ${serviceExist.title} on ${reservation.date} at ${reservation.timeSlot} was created by staff.`,
+            link: `/reservations/${createdReservation[0]._id}`,
+          },
+        ],
+        { session }
+      );
+
+      await session.commitTransaction();
+      session.endSession();
+
+      const result = await Reservation.findById(createdReservation[0]._id)
+        .populate("pet")
+        .populate("petOwner", "userName email mobileNumber")
+        .populate("doctor", "userName email")
+        .populate("service");
+
+      res.status(201).json({
+        success: true,
+        message: "User, pet and reservation created successfully",
+        data: result,
+      });
+    } catch (error) {
+      await session.abortTransaction();
+      session.endSession();
+      next(error);
+    }
   }
 );
 
@@ -362,7 +545,7 @@ export const getAllPetsForStaff = catchAsyncError(async (req, res) => {
 export const getAllPetOwnersForStaff = catchAsyncError(async (req, res) => {
   const users = await User.find({
     role: roles.PETOWNER,
-  }).select("userName email status mobileNumber image");
+  }).select("userName email status mobileNumber image isActive isVerified");
 
   res.status(200).json({
     success: true,
