@@ -32,6 +32,7 @@ export const bootstrap = (app) => {
   app.use("/clinicReview", allRouters.clinicReviewRouter);
   app.use("/doctor", allRouters.doctorRouter);
   app.use("/chat", allRouters.chatRouter);
+  app.use("/api/chat", allRouters.realtimeChatRouter);
   app.use("/disc", allRouters.discountRouter);
   app.use("/analytics", allRouters.analyticsRouter);
   app.use("/staff", allRouters.staffRouter);
