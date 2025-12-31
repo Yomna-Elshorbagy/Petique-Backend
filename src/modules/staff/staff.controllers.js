@@ -104,7 +104,7 @@ export const softDeletedEmployee = catchAsyncError(async (req, res, next) => {
 export const deleteEmployee = catchAsyncError(async (req, res, next) => {
   const { id } = req.params;
 
-  const employee = await User.findOne({ _id: id, role: roles.DOCTORS });
+  const employee = await User.findOne({ _id: id, role: roles.STAFF });
   if (!employee) return next(new AppError("Employee not found", 404));
 
   if (employee.image?.public_id) {
@@ -124,7 +124,7 @@ export const deleteEmployee = catchAsyncError(async (req, res, next) => {
 export const updateEmployee = catchAsyncError(async (req, res, next) => {
   const { id } = req.params;
 
-  let employee = await User.findOne({ _id: id, role: roles.DOCTORS });
+  let employee = await User.findOne({ _id: id, role: roles.STAFF });
   if (!employee) return next(new AppError("Employee not found", 404));
 
   const { userName, mobileNumber, gender, newPassword, confirmPassword } =
