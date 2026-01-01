@@ -1,7 +1,7 @@
 import petModel from "./../../../database/models/pet.model.js";
 import Reservation from "./../../../database/models/reservation.model.js";
 import { AppError, catchAsyncError } from "../../utils/catch-error.js";
-import { roles } from "../../utils/constant/enums.js";
+import { roles, status } from "../../utils/constant/enums.js";
 import { ApiFeature } from "../../utils/file-feature.js";
 import User from "./../../../database/models/user.model.js";
 import cloudinary from "../../utils/fileUpload/cloudinary.js";
@@ -10,6 +10,7 @@ import notificationModel from "../../../database/models/notification.model.js";
 import animalCategoryModel from "../../../database/models/animalCategory.model.js";
 import Service from "../../../database/models/service.model.js";
 import { TIME_SLOTS } from "../../utils/constant/timeSlots.js";
+import { hashedPass } from "../../utils/hash-compare.js";
 
 //======> Staff
 // ==> get all Employee
