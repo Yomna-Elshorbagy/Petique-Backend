@@ -1,5 +1,6 @@
 import { Router } from "express";
 import * as userController from "./user.controllers.js";
+import * as userAnalysisController from "./userAnalysisProducts.js";
 import { isAuthenticated } from "../../middelwares/auth.js";
 import { validate } from "../../middelwares/validate.js";
 import { resetPassVal } from "./user.validation.js";
@@ -30,6 +31,12 @@ userRouter.put(
   uploadSingleFile("image", "users"),
   userController.updateUser
 );
+
+//===> calculating user analysis data required for his prediction
+userRouter.get("/spending", isAuthenticated, userAnalysisController.getUserSpendingSummary);
+userRouter.get("/top-categories", isAuthenticated, userAnalysisController.getUserTopCategories);
+userRouter.get("/top-products", isAuthenticated, userAnalysisController.getUserTopProducts);
+
 
 userRouter.delete("/", isAuthenticated, userController.deleteUserByUser);
 userRouter.put("/softDelete", isAuthenticated, userController.softDeleteUserByUser);
