@@ -252,3 +252,50 @@ export const toggleArchiveConversation = catchAsyncError(async (req, res) => {
 });
 
 
+/**
+ * Clear all chats for current user (soft delete messages only for him)
+ */
+export const clearAllChats = catchAsyncError(async (req, res) => {
+  const userId = req.authUser._id;
+
+  // Get all conversations user participates in
+  const conversations = await Conversation.find({
+    participants: userId,
+  }).select("_id");
+
+  const conversationIds = conversations.map((c) => c._id);
+
+  if (conversationIds.length === 0) {
+    return res.status(200).json({
+      success: true,
+      message: "No chats to clear",
+    });
+  }
+
+  // Soft delete all messages for this user
+  await Message.updateMany(
+    {
+      conversationId: { $in: conversationIds },
+      deletedFor: { $ne: userId },
+    },
+    {
+      $addToSet: { deletedFor: userId },
+    }
+  );
+
+  // Reset unread counts & unarchive
+  await Conversation.updateMany(
+    { _id: { $in: conversationIds } },
+    {
+      $set: {
+        [`unreadCount.${userId}`]: 0,
+        [`isArchived.${userId}`]: false,
+      },
+    }
+  );
+
+  res.status(200).json({
+    success: true,
+    message: "All chats cleared successfully",
+  });
+});

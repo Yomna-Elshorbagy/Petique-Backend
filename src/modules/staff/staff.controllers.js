@@ -11,6 +11,7 @@ import animalCategoryModel from "../../../database/models/animalCategory.model.j
 import Service from "../../../database/models/service.model.js";
 import { TIME_SLOTS } from "../../utils/constant/timeSlots.js";
 import { hashedPass } from "../../utils/hash-compare.js";
+import { deleteCloud } from "../../utils/fileUpload/file-functions.js";
 
 //======> Staff
 // ==> get all Employee
@@ -18,7 +19,7 @@ export const getAllEmployee = catchAsyncError(async (req, res, next) => {
   const Employee = await User.find({
     role: roles.STAFF,
     status: { $ne: status.DELETED },
-  }).select("userName email mobileNumber image");
+  }).select("userName email mobileNumber image gender status isActive role");
 
   res.status(200).json({
     success: true,

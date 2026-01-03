@@ -19,6 +19,9 @@ chatRouter.get("/conversations/:conversationId/messages", chatController.getMess
 // ===> Get available users for chat
 chatRouter.get("/users", chatController.getAvailableUsers);
 
+// ===> Get available users for chat
+chatRouter.delete("/clear", chatController.clearAllChats);
+
 // ===> Delete a message
 chatRouter.delete("/messages/:messageId", chatController.deleteMessage);
 
