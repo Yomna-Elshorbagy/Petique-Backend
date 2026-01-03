@@ -16,11 +16,12 @@ import reviewRouter from "./reviews/review.routers.js";
 import clinicReviewRouter from "./clinicReview/clinicReviews.routers.js";
 import doctorRouter from "./doctor/doctor.routers.js";
 import couponRouter from "./coupon/coupon.routers.js";
-import discountRouter from './discount/discount.routers.js';
-import chatRouter from './Chat/chatRouter.js';
-import realtimeChatRouter from './Chat/chat.routers.js';
-import analyticsRouter from './analysis/analysis.routers.js';
-import staffRouter from './staff/staff.routers.js';
+import discountRouter from "./discount/discount.routers.js";
+import chatRouter from "./Chat/chatRouter.js";
+import realtimeChatRouter from "./Chat/chat.routers.js";
+import analyticsRouter from "./analysis/analysis.routers.js";
+import staffRouter from "./staff/staff.routers.js";
+import symptomCheckerRouter from "./symptomChecker/symptomChecker.routers.js";
 
 export {
   authRouter,
@@ -45,5 +46,6 @@ export {
   chatRouter,
   analyticsRouter,
   staffRouter,
-  realtimeChatRouter
+  realtimeChatRouter,
+  symptomCheckerRouter,
 };
