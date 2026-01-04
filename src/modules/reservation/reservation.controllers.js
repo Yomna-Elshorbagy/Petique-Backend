@@ -714,7 +714,12 @@ export const getMyReservations = catchAsyncError(async (req, res, next) => {
     isDeleted: false,
   })
     .sort({ date: 1 })
-    .populate("pet", ["name", "type", "age"])
+    .populate({
+      path: "pet",
+      populate: {
+        path: "category",
+      },
+    })
     .populate("service", ["title", "priceRange"])
     .populate("doctor", ["userName", "email", "mobileNumber"]);
 
@@ -765,5 +770,56 @@ export const getMyPastReservations = catchAsyncError(async (req, res, next) => {
     success: true,
     count: reservations.length,
     data: reservations,
+  });
+});
+
+// ======================= USER: TRACKER FOR HIS APPOINTMENTS ======================== //
+const getTrackerStatus = (reservation) => {
+  const now = new Date();
+
+  if (reservation.status === "cancelled") return "cancelled";
+  if (reservation.status === "completed") return "completed";
+
+  // past & never confirmed
+  if (reservation.status === "pending" && reservation.date < now)
+    return "no_show";
+
+  // confirmed but not started
+  if (reservation.status === "confirmed" && reservation.date >= now)
+    return "confirmed";
+
+  // same day logic
+  const sameDay = reservation.date.toDateString() === now.toDateString();
+
+  if (sameDay && reservation.status === "confirmed") {
+    return "waiting";
+  }
+
+  return "scheduled";
+};
+
+export const getTrackReservations = catchAsyncError(async (req, res) => {
+  const reservations = await Reservation.find({
+    petOwner: req.authUser._id,
+    isDeleted: false,
+  })
+    .populate({
+      path: "pet",
+      populate: {
+        path: "category",
+      },
+    })
+    .populate("service")
+    .populate("doctor");
+
+  const enriched = reservations.map((r) => ({
+    ...r.toObject(),
+    trackerStatus: getTrackerStatus(r),
+  }));
+
+  res.status(200).json({
+    success: true,
+    count: enriched.length,
+    data: enriched,
   });
 });

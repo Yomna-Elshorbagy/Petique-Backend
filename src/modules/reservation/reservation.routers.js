@@ -84,6 +84,11 @@ reservationRouter.get(
   isAuthenticated,
   reservationControllers.getTodayReservations
 );
+reservationRouter.get(
+  "/track/my",
+  isAuthenticated,
+  reservationControllers.getTrackReservations
+);
 // ===> FILTER 
 reservationRouter.get(
   "/filter/search",
