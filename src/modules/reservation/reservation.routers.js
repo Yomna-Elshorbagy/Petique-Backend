@@ -35,7 +35,7 @@ reservationRouter.get(
   isAuthenticated,
   reservationControllers.checkAvailableSlots
 );
-// ===> doctor routes 
+// ===> doctor routes
 reservationRouter.get(
   "/doctor/reservations/today",
   isAuthenticated,
@@ -48,7 +48,7 @@ reservationRouter.get(
   reservationControllers.getDoctorWeeklyReservations
 );
 
-// ====> statistics 
+// ====> statistics
 reservationRouter.get(
   "/stats/total",
   isAuthenticated,
@@ -89,7 +89,7 @@ reservationRouter.get(
   isAuthenticated,
   reservationControllers.getTrackReservations
 );
-// ===> FILTER 
+// ===> FILTER
 reservationRouter.get(
   "/filter/search",
   isAuthenticated,
@@ -118,6 +118,16 @@ reservationRouter.get(
   isAuthenticated,
   reservationControllers.getMyPastReservations
 );
+reservationRouter.get(
+  "/today-with-alerts",
+  isAuthenticated,
+  reservationControllers.getTodayVaccinations
+);
+reservationRouter.get(
+  "/search/:petId",
+  isAuthenticated,
+  reservationControllers.doctorSearchPets
+);
 //===> reservation
 reservationRouter.get(
   "/:id",
@@ -141,6 +151,5 @@ reservationRouter.delete(
   isAuthenticated,
   reservationControllers.deleteReservation
 );
-
 
 export default reservationRouter;

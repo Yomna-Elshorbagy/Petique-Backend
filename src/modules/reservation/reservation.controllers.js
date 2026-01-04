@@ -8,6 +8,7 @@ import { ApiFeature } from "../../utils/file-feature.js";
 import { roles } from "../../utils/constant/enums.js";
 import { TIME_SLOTS } from "../../utils/constant/timeSlots.js";
 import notificationModel from "../../../database/models/notification.model.js";
+import petModel from "../../../database/models/pet.model.js";
 
 // ===> Create reservation
 export const createReservation = catchAsyncError(async (req, res, next) => {
@@ -797,7 +798,7 @@ const getTrackerStatus = (reservation) => {
 
   return "scheduled";
 };
-
+// ======================= Doctor: TRACKER FOR HIS APPOINTMENTS ======================== //
 export const getTrackReservations = catchAsyncError(async (req, res) => {
   const reservations = await Reservation.find({
     petOwner: req.authUser._id,
@@ -821,5 +822,102 @@ export const getTrackReservations = catchAsyncError(async (req, res) => {
     success: true,
     count: enriched.length,
     data: enriched,
+  });
+});
+
+
+export const doctorSearchPets = catchAsyncError(async (req, res, next) => {
+  if (req.authUser.role !== roles.DOCTORS)
+    return next(new AppError("Only doctors can access this", 403));
+
+  const { search } = req.query;
+
+  // 1️- Get pets IDs from doctor reservations
+  const reservations = await Reservation.find({
+    // doctor: req.authUser._id,  //if i want to get reservations for this specific doctor 
+    isDeleted: false,
+  }).select("pet");
+
+  const petIds = reservations.map((r) => r.pet);
+
+  // 2️- Search filter
+  const query = {
+    _id: { $in: petIds },
+    isDeleted: false,
+  };
+
+  if (search) {
+    const users = await User.find({
+      $or: [
+        { userName: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+        { mobileNumber: { $regex: search, $options: "i" } },
+      ],
+    }).select("_id");
+
+    query.$or = [
+      { name: { $regex: search, $options: "i" } },
+      { age: { $regex: search, $options: "i" } },
+      { weight: { $regex: search, $options: "i" } },
+      ...(users.length ? [{ petOwner: { $in: users.map((u) => u._id) } }] : []),
+    ];
+  }
+
+  // 3️- Fetch pets
+  const pets = await petModel
+    .find(query)
+    .populate("petOwner", "userName email mobileNumber")
+    .populate("category")
+    .lean();
+
+  res.status(200).json({
+    success: true,
+    count: pets.length,
+    data: pets,
+  });
+});
+
+export const getTodayVaccinations = catchAsyncError(async (req, res, next) => {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+
+  const end = new Date();
+  end.setHours(23, 59, 59, 999);
+
+  const pets = await petModel
+    .find({
+      isDeleted: false,
+      vaccinationHistory: {
+        $elemMatch: {
+          nextDose: { $gte: start, $lte: end },
+        },
+      },
+    })
+    .populate("petOwner", "userName email mobileNumber")
+    .populate("category")
+    .populate({
+      path: "vaccinationHistory.vaccine",
+      select: "name description doses",
+    })
+    .lean();
+
+  // Extract today's vaccinations only
+  const result = pets.map((pet) => {
+    const todayVaccines = pet.vaccinationHistory.filter(
+      (v) => v.nextDose >= start && v.nextDose <= end
+    );
+
+    return {
+      petId: pet._id,
+      petName: pet.name,
+      owner: pet.petOwner,
+      vaccinations: todayVaccines,
+    };
+  });
+
+  res.status(200).json({
+    success: true,
+    count: result.length,
+    data: result,
   });
 });
