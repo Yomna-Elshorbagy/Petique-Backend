@@ -631,7 +631,7 @@ export const getVaccinationOverviewForStaff = catchAsyncError(
         isDeleted: false,
         vaccinationHistory: { $exists: true, $ne: [] },
       })
-      .populate("petOwner", "userName mobileNumber")
+      .populate("petOwner", "userName mobileNumber email")
       .populate("category", "name")
       .populate("vaccinationHistory.vaccine", "name")
       .select("name age image petOwner vaccinationHistory weight category");
@@ -652,6 +652,7 @@ export const getVaccinationOverviewForStaff = catchAsyncError(
           // ===== Owner Info =====
           ownerName: pet.petOwner?.userName,
           ownerMobile: pet.petOwner?.mobileNumber,
+          ownerEmail: pet.petOwner?.email,
 
           // ===== Vaccination Info =====
           vaccineName: v.vaccine?.name,

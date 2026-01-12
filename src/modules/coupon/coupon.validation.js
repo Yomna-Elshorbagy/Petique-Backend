@@ -19,7 +19,7 @@ export const updateCouponVal = joi.object({
   code: joi.string().length(6),
   type: joi.string().valid(...Object.values(couponTypes)),
   discount: joi.number().positive().min(1),
-  fromDate: joi.date().greater(Date.now() - 24 * 60 * 60 * 1000),
+  fromDate: joi.date(),
   expire: joi.date().greater(joi.ref("fromDate")),
   id: generalFields.objectId.required(),
 });

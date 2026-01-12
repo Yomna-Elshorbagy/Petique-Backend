@@ -15,6 +15,7 @@ export const addService = catchAsyncError(async (req, res, next) => {
     benefits,
     tips,
     duration,
+    category
   } = req.body;
 
   if (!req.files?.image || req.files.image.length === 0) {
@@ -49,6 +50,7 @@ export const addService = catchAsyncError(async (req, res, next) => {
     benefits,
     tips,
     duration,
+    category
   });
 
   await newService.save();

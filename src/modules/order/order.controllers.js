@@ -71,6 +71,17 @@ export const createOrder = catchAsyncError(async (req, res, next) => {
     if (coupon.expire < now)
       return next(new AppError("Coupon has expired", 400));
 
+    // ========= Check usage coupon limit ==========
+    const userUsage = coupon.usedBy.find(
+      (u) => u.user.toString() === userId.toString()
+    );
+    if (userUsage && userUsage.count >= (coupon.maxUsage || 1)) {
+      return next(
+        new AppError("You have reached the usage limit for this coupon", 400)
+      );
+    }
+    // ========= ===================== ==========
+
     appliedCoupon = coupon._id;
 
     if (coupon.type === couponTypes.PERCENTAGE) {
@@ -231,6 +242,23 @@ export const createOrder = catchAsyncError(async (req, res, next) => {
     message: messages.order.createdSuccessfully,
     data: order,
   });
+
+  // ============= Update coupon usage =============
+  if (appliedCoupon) {
+    const coupon = await Coupon.findById(appliedCoupon);
+    if (coupon) {
+      const userUsageIndex = coupon.usedBy.findIndex(
+        (u) => u.user.toString() === userId.toString()
+      );
+      if (userUsageIndex > -1) {
+        coupon.usedBy[userUsageIndex].count += 1;
+      } else {
+        coupon.usedBy.push({ user: userId, count: 1 });
+      }
+      await coupon.save();
+    }
+  }
+  // ========= ========================= ==========
 });
 
 export const createOrderWithoutstripe = catchAsyncError(
@@ -284,6 +312,16 @@ export const createOrderWithoutstripe = catchAsyncError(
       if (coupon.expire < now)
         return next(new AppError("Coupon has expired", 400));
 
+      // ============ Check usage limit ==================
+      const userUsage = coupon.usedBy.find(
+        (u) => u.user.toString() === userId.toString()
+      );
+      if (userUsage && userUsage.count >= (coupon.maxUsage || 1)) {
+        return next(
+          new AppError("You have reached the usage limit for this coupon", 400)
+        );
+      }
+      // =========== ================== ===================
       appliedCoupon = coupon._id;
 
       if (coupon.type === couponTypes.PERCENTAGE) {
@@ -328,6 +366,23 @@ export const createOrderWithoutstripe = catchAsyncError(
       success: true,
       data: order,
     });
+
+    // ============== Update coupon usage ==================
+    if (appliedCoupon) {
+      const coupon = await Coupon.findById(appliedCoupon);
+      if (coupon) {
+        const userUsageIndex = coupon.usedBy.findIndex(
+          (u) => u.user.toString() === userId.toString()
+        );
+        if (userUsageIndex > -1) {
+          coupon.usedBy[userUsageIndex].count += 1;
+        } else {
+          coupon.usedBy.push({ user: userId, count: 1 });
+        }
+        await coupon.save();
+      }
+    }
+    // ============= ===================== ===================
   }
 );
 
@@ -990,8 +1045,7 @@ export const restoreOrder = catchAsyncError(async (req, res, next) => {
   const order = await Order.findById(id);
   if (!order) return next(new AppError(messages.order.notFound, 404));
 
-  if (!order.isDeleted)
-    return next(new AppError("Order is not deleted", 400));
+  if (!order.isDeleted) return next(new AppError("Order is not deleted", 400));
 
   order.isDeleted = false;
   order.deletedAt = undefined;

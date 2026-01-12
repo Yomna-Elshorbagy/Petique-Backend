@@ -95,7 +95,11 @@ app.post("/webHook", express.raw({ type: "application/json" }), webhookStripe);
 
 // Body parsing middleware
 app.use(json());
-
+app.get("/", (req, res) => {
+  res.json({
+    message: `Welcom to ${process.env.APPLICATION_NAME} Backend ❤️`,
+  });
+});
 bootstrap(app);
 
 // Use httpServer instead of app.listen

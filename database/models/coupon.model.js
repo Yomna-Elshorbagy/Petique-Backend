@@ -33,13 +33,16 @@ let couponSchema = mongoose.Schema(
       type: Number,
       min: 1,
     },
-    assignedUser: [
+    usedBy: [
       {
         user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-        maxUser: { type: Number, default: 10, max: 10 },
-        useCount: Number,
+        count: { type: Number, default: 1 },
       },
     ],
+    maxUsage: {
+      type: Number,
+      default: 1000,
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
